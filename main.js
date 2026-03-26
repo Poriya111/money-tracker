@@ -312,6 +312,12 @@ function saveSpaces() {
     localStorage.setItem('activeSpaceId', activeSpaceId);
 }
 
+function getSpaceBalance(spaceId) {
+    return transactions
+        .filter(t => t.spaceId === spaceId)
+        .reduce((acc, t) => acc + t.amount, 0);
+}
+
 function openSelectSpaceModal() {
     modalSpacesList.innerHTML = '';
     spaces.forEach(space => {
@@ -319,9 +325,16 @@ function openSelectSpaceModal() {
         div.classList.add('space-selection-item');
         if (space.id === activeSpaceId) div.classList.add('active');
         
+        const spaceBalance = getSpaceBalance(space.id);
+        
         div.innerHTML = `
-            <div style="font-weight:700;">${space.name}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">${space.description || 'Global workspace'}</div>
+            <div>
+                <div style="font-weight:700; font-size:0.9rem;">${space.name}</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${space.description || 'Primary Workspace'}</div>
+            </div>
+            <div class="space-balance" style="color: ${spaceBalance < 0 ? 'var(--expense)' : 'var(--text-main)'}">
+                ${formatter.format(spaceBalance)}
+            </div>
         `;
         
         div.onclick = () => {
@@ -427,7 +440,12 @@ function updateLocalStorage() {
 function init() {
   list.innerHTML = '';
   const searchTerm = searchInput.value.toLowerCase();
-  
+
+  // Reset prev values to 0 when switching spaces to force a full roll
+  prevTotal = 0;
+  prevIncome = 0;
+  prevExpense = 0;
+
   const activeTransactions = transactions.filter(t => 
     t.spaceId === activeSpaceId && 
     t.text.toLowerCase().includes(searchTerm)
