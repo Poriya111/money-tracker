@@ -489,6 +489,10 @@ editSpaceBtn.addEventListener('click', openEditModal);
 deleteSpaceBtn.addEventListener('click', deleteActiveSpace);
 btnExpense.addEventListener('click', () => setAmountType('expense'));
 btnIncome.addEventListener('click', () => setAmountType('income'));
+const viewAnalyticsBtn = document.getElementById('view-analytics');
+if(viewAnalyticsBtn) {
+    viewAnalyticsBtn.addEventListener('click', () => window.location.href = 'analytics.html');
+}
 selectSpaceTrigger.addEventListener('click', openSelectSpaceModal);
 closeSelectSpaceModalBtn.addEventListener('click', closeSelectSpaceModal);
 editBtnExpense.addEventListener('click', () => setEditAmountType('expense'));

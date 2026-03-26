@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics — Money Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <div class="status-dot"></div>
+            <span id="current-space-name">Analytics</span>
+        </header>
+
+        <!-- Section 1: Performance Chart -->
+        <div class="chart-section">
+            <div class="section-header">
+                <h3 style="margin:0">Equity Curve</h3>
+                <span class="metric-trend" id="chart-period">Last 30 Days</span>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Section 2: Monthly Comparison -->
+        <div class="chart-section">
+            <div class="section-header">
+                <h3 style="margin:0">Cash Flow</h3>
+            </div>
+            <div class="chart-wrapper" style="height: 200px;">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Section 3: Metrics Grid -->
+        <div class="analytics-grid">
+            <div class="metric-card">
+                <span class="metric-label">Volume</span>
+                <span class="metric-value" id="metric-gross">$0.00</span>
+                <span class="metric-trend" id="trend-gross">0% vs last period</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Average</span>
+                <span class="metric-value" id="metric-avg">$0.00</span>
+                <span class="metric-trend" id="trend-avg">--</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Count</span>
+                <span class="metric-value" id="metric-count">0</span>
+                <span class="metric-trend" id="trend-count">Transactions</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-label">Net Flux</span>
+                <span class="metric-value" id="metric-burn">0%</span>
+                <span class="metric-trend" id="trend-burn">Efficiency</span>
+            </div>
+        </div>
+
+        <!-- Section 4: High Value Movements -->
+        <h3 style="margin-top: 40px;">Significant Activity</h3>
+        <div class="chart-section" style="min-height: auto;">
+            <table class="data-table" id="top-transactions">
+                <!-- Injected via JS -->
+            </table>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-icon-btn" id="settings-btn" title="Settings">⚙️</button>
+        <button class="nav-btn" onclick="window.location.href='index.html'">Back to Tracking Space</button>
+        <div style="width: 36px"></div> <!-- Spacer for symmetry -->
+    </nav>
+
+    <script src="analytics.js"></script>
+</body>
+</html>
