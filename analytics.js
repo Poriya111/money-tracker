@@ -1,5 +1,6 @@
 const transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-const activeSpaceId = parseInt(localStorage.getItem('activeSpaceId'));
+const spaces = JSON.parse(localStorage.getItem('spaces')) || [{ id: 1, name: 'Main' }];
+const activeSpaceId = parseInt(localStorage.getItem('activeSpaceId')) || spaces[0].id;
 const settings = JSON.parse(localStorage.getItem('settings')) || { currency: 'USD' };
 const activeSpaceTransactions = transactions.filter(t => t.spaceId === activeSpaceId).sort((a,b) => a.date - b.date);
 
@@ -9,6 +10,11 @@ const formatter = new Intl.NumberFormat('en-US', {
 });
 
 function initAnalytics() {
+    const currentSpace = spaces.find(s => s.id === activeSpaceId);
+    if (currentSpace) {
+        document.getElementById('current-space-name').textContent = `${currentSpace.name} Analytics`;
+    }
+
     renderMetrics();
     renderEquityChart();
     renderMonthlyChart();

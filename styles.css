@@ -57,6 +57,7 @@ body {
     justify-content: center;
     gap: 8px;
     margin-bottom: 3rem;
+    position: relative;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -423,6 +424,17 @@ input:focus {
     margin-top: 2px;
 }
 
+.category-tag {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    background-color: var(--accent-muted);
+    color: var(--text-muted);
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
 .transaction-amount {
     display: flex;
     align-items: center;
@@ -680,4 +692,21 @@ input:focus {
         opacity: 1; 
         transform: scale(1) translateY(0); 
     }
+}
+
+.transfer-step {
+    display: none;
+}
+.transfer-step.active {
+    display: block;
+}
+
+.transfer-out-wrapper span,
+.transfer-out-wrapper input {
+    color: var(--expense);
+}
+
+.transfer-in-wrapper span,
+.transfer-in-wrapper input {
+    color: var(--income);
 }

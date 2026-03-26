@@ -60,16 +60,39 @@ const selectSpaceOverlay = document.getElementById('select-space-overlay');
 const modalSpacesList = document.getElementById('modal-spaces-list');
 const closeSelectSpaceModalBtn = document.getElementById('close-select-space-modal');
 
+const addTransactionOverlay = document.getElementById('add-transaction-overlay');
+const openAddTransactionBtn = document.getElementById('open-add-transaction');
+const closeAddModalBtn = document.getElementById('close-add-modal');
+const category = document.getElementById('category');
+
 // Edit Transaction Elements
 const editOverlay = document.getElementById('edit-transaction-overlay');
 const editForm = document.getElementById('edit-form');
 const editText = document.getElementById('edit-text');
 const editAmount = document.getElementById('edit-amount');
+const editCategory = document.getElementById('edit-category');
 const editAmountSelector = document.getElementById('edit-amount-selector');
 const editBtnExpense = document.getElementById('edit-btn-expense');
 const editBtnIncome = document.getElementById('edit-btn-income');
 const closeEditModalBtn = document.getElementById('close-edit-modal');
 const editDeleteBtn = document.getElementById('edit-delete-btn');
+
+// Transfer Wizard Elements
+const transferTrigger = document.getElementById('transfer-trigger');
+const transferOverlay = document.getElementById('transfer-overlay');
+const transferSpaceList = document.getElementById('transfer-space-list');
+const transferAmountOut = document.getElementById('transfer-amount-out');
+const transferAmountIn = document.getElementById('transfer-amount-in');
+const transferOutLabel = document.getElementById('transfer-out-label');
+const transferInLabel = document.getElementById('transfer-in-label');
+const transferText = document.getElementById('transfer-text');
+const transferCategory = document.getElementById('transfer-category');
+const transferNextBtn = document.getElementById('transfer-next-btn');
+const transferBackBtn = document.getElementById('transfer-back-btn');
+const closeTransferModalBtn = document.getElementById('close-transfer-modal');
+
+let transferStep = 1;
+let transferData = { targetId: null };
 
 let editingTransactionId = null;
 let editAmountType = 'expense';
@@ -90,6 +113,7 @@ function addTransaction(e) {
     id: generateID(),
     text: text.value,
     amount: finalAmount,
+    category: category.value,
     spaceId: activeSpaceId,
     date: new Date().getTime()
   };
@@ -99,8 +123,9 @@ function addTransaction(e) {
   updateValues();
   updateLocalStorage();
 
-  text.value = '';
-  amount.value = '';
+  form.reset();
+  addTransactionOverlay.classList.remove('active');
+  setAmountType('expense');
 }
 
 // Generate random ID
@@ -143,7 +168,10 @@ function addTransactionDOM(transaction) {
 
   item.innerHTML = `
     <div class="transaction-info">
-        <span class="transaction-text">${transaction.text}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="transaction-text">${transaction.text}</span>
+            <span class="category-tag">${transaction.category || 'General'}</span>
+        </div>
         <span class="transaction-date">${dateString}</span>
     </div>
     <div class="transaction-amount">
@@ -162,6 +190,7 @@ function openEditTransactionModal(id) {
     editingTransactionId = id;
     editText.value = transaction.text;
     editAmount.value = Math.abs(transaction.amount);
+    editCategory.value = transaction.category || 'General';
     
     setEditAmountType(transaction.amount < 0 ? 'expense' : 'income');
     
@@ -190,6 +219,7 @@ function handleEditSubmit(e) {
 
     transactions[index].text = editText.value;
     transactions[index].amount = finalAmount;
+    transactions[index].category = editCategory.value;
 
     updateLocalStorage();
     closeEditModal();
@@ -320,6 +350,16 @@ function getSpaceBalance(spaceId) {
 
 function openSelectSpaceModal() {
     modalSpacesList.innerHTML = '';
+    
+    const totalNetWorth = spaces.reduce((acc, s) => acc + getSpaceBalance(s.id), 0);
+    const portfolioHeader = document.createElement('div');
+    portfolioHeader.style.marginBottom = '24px';
+    portfolioHeader.innerHTML = `
+        <div class="metric-label">Total Portfolio Value</div>
+        <div class="metric-value" style="color: var(--accent); font-size: 1.8rem;">${formatter.format(totalNetWorth)}</div>
+    `;
+    modalSpacesList.appendChild(portfolioHeader);
+
     spaces.forEach(space => {
         const div = document.createElement('div');
         div.classList.add('space-selection-item');
@@ -346,6 +386,122 @@ function openSelectSpaceModal() {
         modalSpacesList.appendChild(div);
     });
     selectSpaceOverlay.classList.add('active');
+}
+
+function openTransferModal() {
+    transferStep = 1;
+    transferData = { targetId: null };
+    transferAmountOut.value = '';
+    transferAmountIn.value = '';
+    transferText.value = '';
+    updateTransferWizardUI();
+    renderTransferSpaceSelection();
+    transferOverlay.classList.add('active');
+}
+
+function renderTransferSpaceSelection() {
+    transferSpaceList.innerHTML = '';
+    spaces.filter(s => s.id !== activeSpaceId).forEach(space => {
+        const div = document.createElement('div');
+        div.classList.add('space-selection-item');
+        div.innerHTML = `
+            <div style="font-weight:700;">${space.name}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${space.description || ''}</div>
+        `;
+        div.onclick = () => {
+            transferData.targetId = space.id;
+            transferOutLabel.textContent = `Send to ${space.name}`;
+            transferInLabel.textContent = `Receive from ${space.name} (optional)`;
+            goToTransferStep(2);
+        };
+        transferSpaceList.appendChild(div);
+    });
+}
+
+function goToTransferStep(step) {
+    transferStep = step;
+    updateTransferWizardUI();
+}
+
+function updateTransferWizardUI() {
+    document.querySelectorAll('.transfer-step').forEach((el, idx) => {
+        el.classList.toggle('active', idx + 1 === transferStep);
+    });
+    document.getElementById('step-indicator').textContent = `STEP ${transferStep}/3`;
+    transferBackBtn.style.display = transferStep > 1 ? 'block' : 'none';
+    transferNextBtn.textContent = transferStep === 3 ? 'Complete Transfer' : 'Next Step';
+}
+
+function handleTransferNext() {
+    if (transferStep === 1 && !transferData.targetId) {
+        alert('Please select a target space');
+        return;
+    }
+    if (transferStep === 2) {
+        const outVal = parseFloat(transferAmountOut.value) || 0;
+        const inVal = parseFloat(transferAmountIn.value) || 0;
+        if (outVal <= 0 && inVal <= 0) {
+            alert('Please enter at least one amount to transfer');
+            return;
+        }
+        goToTransferStep(3);
+        transferText.focus();
+        return;
+    }
+    if (transferStep === 3) {
+        executeTransfer();
+    } else {
+        goToTransferStep(transferStep + 1);
+    }
+}
+
+function executeTransfer() {
+    const amountOut = parseFloat(transferAmountOut.value) || 0;
+    const amountIn = parseFloat(transferAmountIn.value) || 0;
+    const label = transferText.value || 'Internal Transfer';
+    const cat = transferCategory.value;
+    const targetSpace = spaces.find(s => s.id === transferData.targetId);
+    const currentSpace = spaces.find(s => s.id === activeSpaceId);
+
+    if (amountOut > 0) {
+        transactions.push({
+            id: generateID(),
+            text: `${label} (to ${targetSpace.name})`,
+            amount: -amountOut,
+            category: cat,
+            spaceId: activeSpaceId,
+            date: new Date().getTime()
+        }, {
+            id: generateID(),
+            text: `${label} (from ${currentSpace.name})`,
+            amount: amountOut,
+            category: cat,
+            spaceId: transferData.targetId,
+            date: new Date().getTime()
+        });
+    }
+
+    if (amountIn > 0) {
+        transactions.push({
+            id: generateID(),
+            text: `${label} (from ${targetSpace.name})`,
+            amount: amountIn,
+            category: cat,
+            spaceId: activeSpaceId,
+            date: new Date().getTime()
+        }, {
+            id: generateID(),
+            text: `${label} (to ${currentSpace.name})`,
+            amount: -amountIn,
+            category: cat,
+            spaceId: transferData.targetId,
+            date: new Date().getTime()
+        });
+    }
+
+    updateLocalStorage();
+    transferOverlay.classList.remove('active');
+    init();
 }
 
 function closeSelectSpaceModal() {
@@ -458,6 +614,8 @@ function init() {
       currentSpaceDisplay.textContent = currentSpace.name;
   }
 
+  transferTrigger.style.display = spaces.length > 1 ? 'block' : 'none';
+
   updateValues();
   renderSpaces();
 }
@@ -475,6 +633,8 @@ window.addEventListener('keydown', (e) => {
         settingsOverlay.classList.remove('active');
         closeEditModal();
         closeSelectSpaceModal();
+        addTransactionOverlay.classList.remove('active');
+        transferOverlay.classList.remove('active');
     }
 });
 
@@ -483,6 +643,20 @@ settingsOverlay.addEventListener('click', (e) => e.target === settingsOverlay &&
 editOverlay.addEventListener('click', (e) => e.target === editOverlay && closeEditModal());
 modalOverlay.addEventListener('click', (e) => e.target === modalOverlay && closeModal());
 selectSpaceOverlay.addEventListener('click', (e) => e.target === selectSpaceOverlay && closeSelectSpaceModal());
+addTransactionOverlay.addEventListener('click', (e) => e.target === addTransactionOverlay && addTransactionOverlay.classList.remove('active'));
+transferOverlay.addEventListener('click', (e) => e.target === transferOverlay && transferOverlay.classList.remove('active'));
+
+openAddTransactionBtn.addEventListener('click', () => {
+    addTransactionOverlay.classList.add('active');
+    text.focus();
+});
+
+closeAddModalBtn.addEventListener('click', () => {
+    addTransactionOverlay.classList.remove('active');
+    form.reset();
+    setAmountType('expense');
+});
+
 settingsForm.addEventListener('submit', saveSettings);
 clearDataBtn.addEventListener('click', clearAllData);
 editSpaceBtn.addEventListener('click', openEditModal);
@@ -490,6 +664,12 @@ deleteSpaceBtn.addEventListener('click', deleteActiveSpace);
 btnExpense.addEventListener('click', () => setAmountType('expense'));
 btnIncome.addEventListener('click', () => setAmountType('income'));
 const viewAnalyticsBtn = document.getElementById('view-analytics');
+
+transferTrigger.addEventListener('click', openTransferModal);
+transferBackBtn.addEventListener('click', () => goToTransferStep(transferStep - 1));
+transferNextBtn.addEventListener('click', handleTransferNext);
+closeTransferModalBtn.addEventListener('click', () => transferOverlay.classList.remove('active'));
+
 if(viewAnalyticsBtn) {
     viewAnalyticsBtn.addEventListener('click', () => window.location.href = 'analytics.html');
 }
