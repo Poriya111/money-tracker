@@ -42,12 +42,20 @@
         <form id="form">
             <div class="form-control">
                 <label for="text">Description</label>
-                <input type="text" id="text" placeholder="e.g., Sales, Expences..." required />
+                <input type="text" id="text" placeholder="What was this for?" required />
             </div>
-            <div class="form-control">
-                <label for="amount">Amount <br /> (negative = expense, positive = income)</label>
-                <input type="number" step="0.01" id="amount" placeholder="Enter amount..." required />
+            
+            <div class="amount-selector expense-active" id="amount-selector">
+                <div class="segmented-control">
+                    <button type="button" class="segment-btn active" id="btn-expense">Expense</button>
+                    <button type="button" class="segment-btn" id="btn-income">Income</button>
+                </div>
+                <div class="massive-amount-wrapper">
+                    <span id="amount-currency-symbol">$</span>
+                    <input type="number" step="0.01" id="amount" placeholder="0.00" required />
+                </div>
             </div>
+
         <br>
             <button class="btn">Add Transaction</button>
         </form>
@@ -66,6 +74,7 @@
         <div class="spaces-container" id="spaces-list">
             <!-- Spaces will be injected here -->
         </div>
+        <button class="nav-btn" id="select-space-trigger" title="Select Tracking Space" style="display: none;">Select Tracking Space</button>
         <button class="add-space-btn" id="add-space-btn" title="Add Tracking Space">+</button>
     </nav>
 
@@ -117,6 +126,51 @@
                     <button type="submit" class="btn">Save Settings</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Edit Transaction Modal -->
+    <div class="modal-overlay" id="edit-transaction-overlay">
+        <div class="modal">
+            <h3>Transaction Details</h3>
+            <form id="edit-form">
+                <div class="form-control">
+                    <label for="edit-text">Description</label>
+                    <input type="text" id="edit-text" required />
+                </div>
+                
+                <div class="amount-selector" id="edit-amount-selector">
+                    <div class="segmented-control">
+                        <button type="button" class="segment-btn" id="edit-btn-expense">Expense</button>
+                        <button type="button" class="segment-btn" id="edit-btn-income">Income</button>
+                    </div>
+                    <div class="massive-amount-wrapper">
+                        <span class="edit-currency-symbol">$</span>
+                        <input type="number" step="0.01" id="edit-amount" placeholder="0.00" required />
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-danger-ghost" id="edit-delete-btn">Delete</button>
+                    <div style="flex: 1; display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-ghost" id="close-edit-modal">Cancel</button>
+                        <button type="submit" class="btn">Save Changes</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Select Space Modal -->
+    <div class="modal-overlay" id="select-space-overlay">
+        <div class="modal">
+            <h3>Select Tracking Space</h3>
+            <div class="space-selection-list" id="modal-spaces-list">
+                <!-- Spaces will be injected here -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="close-select-space-modal">Close</button>
+            </div>
         </div>
     </div>
 

@@ -39,6 +39,13 @@ const editSpaceBtn = document.getElementById('edit-space-btn');
 const deleteSpaceBtn = document.getElementById('delete-space-btn');
 let isEditingSpace = false;
 
+// Amount Toggle Logic
+const amountSelector = document.getElementById('amount-selector');
+const btnExpense = document.getElementById('btn-expense');
+const btnIncome = document.getElementById('btn-income');
+const amountCurrencySymbol = document.getElementById('amount-currency-symbol');
+let amountType = 'expense';
+
 // Settings Elements
 const settingsBtn = document.getElementById('settings-btn');
 const settingsOverlay = document.getElementById('settings-overlay');
@@ -46,6 +53,26 @@ const settingsForm = document.getElementById('settings-form');
 const currencySelect = document.getElementById('currency-select');
 const themeSelect = document.getElementById('theme-select');
 const clearDataBtn = document.getElementById('clear-data');
+
+// Select Space Elements
+const selectSpaceTrigger = document.getElementById('select-space-trigger');
+const selectSpaceOverlay = document.getElementById('select-space-overlay');
+const modalSpacesList = document.getElementById('modal-spaces-list');
+const closeSelectSpaceModalBtn = document.getElementById('close-select-space-modal');
+
+// Edit Transaction Elements
+const editOverlay = document.getElementById('edit-transaction-overlay');
+const editForm = document.getElementById('edit-form');
+const editText = document.getElementById('edit-text');
+const editAmount = document.getElementById('edit-amount');
+const editAmountSelector = document.getElementById('edit-amount-selector');
+const editBtnExpense = document.getElementById('edit-btn-expense');
+const editBtnIncome = document.getElementById('edit-btn-income');
+const closeEditModalBtn = document.getElementById('close-edit-modal');
+const editDeleteBtn = document.getElementById('edit-delete-btn');
+
+let editingTransactionId = null;
+let editAmountType = 'expense';
 
 // Add transaction
 function addTransaction(e) {
@@ -56,10 +83,13 @@ function addTransaction(e) {
     return;
   }
 
+  const val = parseFloat(amount.value);
+  const finalAmount = amountType === 'expense' ? -Math.abs(val) : Math.abs(val);
+
   const transaction = {
     id: generateID(),
     text: text.value,
-    amount: parseFloat(amount.value),
+    amount: finalAmount,
     spaceId: activeSpaceId,
     date: new Date().getTime()
   };
@@ -118,11 +148,57 @@ function addTransactionDOM(transaction) {
     </div>
     <div class="transaction-amount">
         <span>${formatter.format(transaction.amount)}</span>
-        <button class="delete-btn" onclick="removeTransaction(${transaction.id})">Remove</button>
     </div>
   `;
 
+  item.onclick = () => openEditTransactionModal(transaction.id);
   list.appendChild(item);
+}
+
+function openEditTransactionModal(id) {
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+
+    editingTransactionId = id;
+    editText.value = transaction.text;
+    editAmount.value = Math.abs(transaction.amount);
+    
+    setEditAmountType(transaction.amount < 0 ? 'expense' : 'income');
+    
+    editOverlay.classList.add('active');
+}
+
+function setEditAmountType(type) {
+    editAmountType = type;
+    if (type === 'expense') {
+        editAmountSelector.classList.add('expense-active');
+        editAmountSelector.classList.remove('income-active');
+    } else {
+        editAmountSelector.classList.add('income-active');
+        editAmountSelector.classList.remove('expense-active');
+    }
+}
+
+function handleEditSubmit(e) {
+    e.preventDefault();
+    
+    const index = transactions.findIndex(t => t.id === editingTransactionId);
+    if (index === -1) return;
+
+    const val = parseFloat(editAmount.value);
+    const finalAmount = editAmountType === 'expense' ? -Math.abs(val) : Math.abs(val);
+
+    transactions[index].text = editText.value;
+    transactions[index].amount = finalAmount;
+
+    updateLocalStorage();
+    closeEditModal();
+    init();
+}
+
+function closeEditModal() {
+    editOverlay.classList.remove('active');
+    editingTransactionId = null;
 }
 
 // Update the balance, income and expense summaries
@@ -206,25 +282,61 @@ function handleSpaceSubmit(e) {
 
 function renderSpaces() {
     spacesList.innerHTML = '';
-    spaces.forEach(space => {
-        const btn = document.createElement('button');
-        btn.classList.add('space-tab');
-        if (space.id === activeSpaceId) btn.classList.add('active');
-        
-        btn.textContent = space.name;
-        
-        btn.onclick = () => {
-            activeSpaceId = space.id;
-            localStorage.setItem('activeSpaceId', activeSpaceId);
-            init();
-        };
-        spacesList.appendChild(btn);
-    });
+    
+    if (spaces.length > 2) {
+        selectSpaceTrigger.style.display = 'flex';
+        spacesList.style.display = 'none';
+    } else {
+        selectSpaceTrigger.style.display = 'none';
+        spacesList.style.display = 'flex';
+
+        spaces.forEach(space => {
+            const btn = document.createElement('button');
+            btn.classList.add('space-tab');
+            if (space.id === activeSpaceId) btn.classList.add('active');
+            
+            btn.textContent = space.name;
+            
+            btn.onclick = () => {
+                activeSpaceId = space.id;
+                localStorage.setItem('activeSpaceId', activeSpaceId);
+                init();
+            };
+            spacesList.appendChild(btn);
+        });
+    }
 }
 
 function saveSpaces() {
     localStorage.setItem('spaces', JSON.stringify(spaces));
     localStorage.setItem('activeSpaceId', activeSpaceId);
+}
+
+function openSelectSpaceModal() {
+    modalSpacesList.innerHTML = '';
+    spaces.forEach(space => {
+        const div = document.createElement('div');
+        div.classList.add('space-selection-item');
+        if (space.id === activeSpaceId) div.classList.add('active');
+        
+        div.innerHTML = `
+            <div style="font-weight:700;">${space.name}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">${space.description || 'Global workspace'}</div>
+        `;
+        
+        div.onclick = () => {
+            activeSpaceId = space.id;
+            localStorage.setItem('activeSpaceId', activeSpaceId);
+            closeSelectSpaceModal();
+            init();
+        };
+        modalSpacesList.appendChild(div);
+    });
+    selectSpaceOverlay.classList.add('active');
+}
+
+function closeSelectSpaceModal() {
+    selectSpaceOverlay.classList.remove('active');
 }
 
 function deleteActiveSpace() {
@@ -244,13 +356,41 @@ function deleteActiveSpace() {
     }
 }
 
+// Handle Amount Toggle
+function setAmountType(type) {
+    amountType = type;
+    if (type === 'expense') {
+        amountSelector.classList.add('expense-active');
+        amountSelector.classList.remove('income-active');
+        btnExpense.classList.add('active');
+        btnIncome.classList.remove('active');
+    } else {
+        amountSelector.classList.add('income-active');
+        amountSelector.classList.remove('expense-active');
+        btnIncome.classList.add('active');
+        btnExpense.classList.remove('active');
+    }
+}
+
 // Settings Management
 function applySettings() {
     document.body.setAttribute('data-theme', settings.theme);
-    formatter = new Intl.NumberFormat('en-US', {
+    const tempFormatter = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: settings.currency,
     });
+    
+    formatter = tempFormatter;
+    
+    // Extract just the symbol for the massive input
+    const parts = tempFormatter.formatToParts(0);
+    const symbol = parts.find(p => p.type === 'currency').value;
+    amountCurrencySymbol.textContent = symbol;
+    
+    document.querySelectorAll('.edit-currency-symbol').forEach(el => {
+        el.textContent = symbol;
+    });
+
     currencySelect.value = settings.currency;
     themeSelect.value = settings.theme;
     init();
@@ -276,6 +416,7 @@ function clearAllData() {
 function removeTransaction(id) {
   transactions = transactions.filter(t => t.id !== id);
   updateLocalStorage();
+  closeEditModal();
   init();
 }
 
@@ -314,13 +455,26 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeModal();
         settingsOverlay.classList.remove('active');
+        closeEditModal();
+        closeSelectSpaceModal();
     }
 });
 
 settingsBtn.addEventListener('click', () => settingsOverlay.classList.add('active'));
 settingsOverlay.addEventListener('click', (e) => e.target === settingsOverlay && settingsOverlay.classList.remove('active'));
+editOverlay.addEventListener('click', (e) => e.target === editOverlay && closeEditModal());
 modalOverlay.addEventListener('click', (e) => e.target === modalOverlay && closeModal());
+selectSpaceOverlay.addEventListener('click', (e) => e.target === selectSpaceOverlay && closeSelectSpaceModal());
 settingsForm.addEventListener('submit', saveSettings);
 clearDataBtn.addEventListener('click', clearAllData);
 editSpaceBtn.addEventListener('click', openEditModal);
 deleteSpaceBtn.addEventListener('click', deleteActiveSpace);
+btnExpense.addEventListener('click', () => setAmountType('expense'));
+btnIncome.addEventListener('click', () => setAmountType('income'));
+selectSpaceTrigger.addEventListener('click', openSelectSpaceModal);
+closeSelectSpaceModalBtn.addEventListener('click', closeSelectSpaceModal);
+editBtnExpense.addEventListener('click', () => setEditAmountType('expense'));
+editBtnIncome.addEventListener('click', () => setEditAmountType('income'));
+editForm.addEventListener('submit', handleEditSubmit);
+closeEditModalBtn.addEventListener('click', closeEditModal);
+editDeleteBtn.addEventListener('click', () => removeTransaction(editingTransactionId));
