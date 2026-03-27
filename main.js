@@ -77,6 +77,12 @@ const editBtnIncome = document.getElementById('edit-btn-income');
 const closeEditModalBtn = document.getElementById('close-edit-modal');
 const editDeleteBtn = document.getElementById('edit-delete-btn');
 
+// History Modal Elements
+const historyOverlay = document.getElementById('history-overlay');
+const fullHistoryList = document.getElementById('full-history-list');
+const showMoreBtn = document.getElementById('show-more-btn');
+const showMoreContainer = document.getElementById('show-more-container');
+
 // Transfer Wizard Elements
 const transferTrigger = document.getElementById('transfer-trigger');
 const transferOverlay = document.getElementById('transfer-overlay');
@@ -101,8 +107,8 @@ let editAmountType = 'expense';
 function addTransaction(e) {
   e.preventDefault();
 
-  if (text.value.trim() === '' || amount.value.trim() === '') {
-    alert('Please add a description and amount');
+  if (amount.value.trim() === '') {
+    alert('Please add an amount');
     return;
   }
 
@@ -133,6 +139,44 @@ function generateID() {
   return Math.floor(Math.random() * 100000000);
 }
 
+// Professional Export Utility
+function exportData(type) {
+    const activeTransactions = transactions.filter(t => t.spaceId === activeSpaceId);
+    if (activeTransactions.length === 0) {
+        alert('No data available to export in this space.');
+        return;
+    }
+
+    let content = '';
+    let fileName = `ledger_${activeSpaceId}_${new Date().toISOString().split('T')[0]}`;
+    let mimeType = 'text/plain';
+
+    if (type === 'json') {
+        content = JSON.stringify(activeTransactions, null, 2);
+        fileName += '.json';
+        mimeType = 'application/json';
+    } else if (type === 'csv') {
+        const headers = ['Date', 'Description', 'Category', 'Amount'];
+        const rows = activeTransactions.map(t => [
+            new Date(t.date).toLocaleDateString(),
+            `"${t.text || t.category || 'Untitled'}"`,
+            `"${t.category || 'General'}"`,
+            t.amount
+        ]);
+        content = [headers, ...rows].map(e => e.join(",")).join("\n");
+        fileName += '.csv';
+        mimeType = 'text/csv';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 // Rolling Counter Animation
 function animateValue(obj, start, end, duration) {
   let startTimestamp = null;
@@ -158,7 +202,7 @@ function animateValue(obj, start, end, duration) {
 }
 
 // Add transactions to DOM list
-function addTransactionDOM(transaction) {
+function addTransactionDOM(transaction, targetEl = list) {
   const item = document.createElement('li');
 
   const date = new Date(transaction.date || Date.now());
@@ -169,7 +213,7 @@ function addTransactionDOM(transaction) {
   item.innerHTML = `
     <div class="transaction-info">
         <div style="display:flex; align-items:center; gap:8px;">
-            <span class="transaction-text">${transaction.text}</span>
+            <span class="transaction-text">${transaction.text || transaction.category || 'Untitled'}</span>
             <span class="category-tag">${transaction.category || 'General'}</span>
         </div>
         <span class="transaction-date">${dateString}</span>
@@ -180,7 +224,7 @@ function addTransactionDOM(transaction) {
   `;
 
   item.onclick = () => openEditTransactionModal(transaction.id);
-  list.appendChild(item);
+  targetEl.appendChild(item);
 }
 
 function openEditTransactionModal(id) {
@@ -386,6 +430,18 @@ function openSelectSpaceModal() {
         modalSpacesList.appendChild(div);
     });
     selectSpaceOverlay.classList.add('active');
+}
+
+function openFullHistoryModal() {
+    fullHistoryList.innerHTML = '';
+    const searchTerm = searchInput.value.toLowerCase();
+    const activeTransactions = transactions.filter(t => 
+      t.spaceId === activeSpaceId && 
+      (t.text.toLowerCase().includes(searchTerm) || (t.category && t.category.toLowerCase().includes(searchTerm)))
+    ).sort((a, b) => b.date - a.date);
+
+    activeTransactions.forEach(t => addTransactionDOM(t, fullHistoryList));
+    historyOverlay.classList.add('active');
 }
 
 function openTransferModal() {
@@ -605,9 +661,13 @@ function init() {
   const activeTransactions = transactions.filter(t => 
     t.spaceId === activeSpaceId && 
     t.text.toLowerCase().includes(searchTerm)
-  );
+  ).sort((a, b) => b.date - a.date);
 
-  activeTransactions.forEach(addTransactionDOM);
+  const displayTransactions = activeTransactions.slice(0, 4);
+  displayTransactions.forEach(t => addTransactionDOM(t));
+  
+  // Handle "Show More" visibility
+  showMoreContainer.style.display = activeTransactions.length > 4 ? 'block' : 'none';
   
   const currentSpace = spaces.find(s => s.id === activeSpaceId);
   if (currentSpace) {
@@ -619,6 +679,23 @@ function init() {
   updateValues();
   renderSpaces();
 }
+
+// Ghost Mode Interaction Logic
+let ghostPressTimer;
+
+const toggleGhostMode = () => {
+    document.body.classList.toggle('ghost-mode');
+};
+
+balance.addEventListener('mousedown', () => {
+    ghostPressTimer = setTimeout(toggleGhostMode, 1000);
+});
+balance.addEventListener('mouseup', () => clearTimeout(ghostPressTimer));
+balance.addEventListener('touchstart', () => {
+    ghostPressTimer = setTimeout(toggleGhostMode, 1000);
+}, { passive: true });
+balance.addEventListener('touchend', () => clearTimeout(ghostPressTimer));
+balance.addEventListener('contextmenu', (e) => e.preventDefault());
 
 applySettings();
 form.addEventListener('submit', addTransaction);
@@ -635,6 +712,7 @@ window.addEventListener('keydown', (e) => {
         closeSelectSpaceModal();
         addTransactionOverlay.classList.remove('active');
         transferOverlay.classList.remove('active');
+        historyOverlay.classList.remove('active');
     }
 });
 
@@ -645,6 +723,7 @@ modalOverlay.addEventListener('click', (e) => e.target === modalOverlay && close
 selectSpaceOverlay.addEventListener('click', (e) => e.target === selectSpaceOverlay && closeSelectSpaceModal());
 addTransactionOverlay.addEventListener('click', (e) => e.target === addTransactionOverlay && addTransactionOverlay.classList.remove('active'));
 transferOverlay.addEventListener('click', (e) => e.target === transferOverlay && transferOverlay.classList.remove('active'));
+historyOverlay.addEventListener('click', (e) => e.target === historyOverlay && historyOverlay.classList.remove('active'));
 
 openAddTransactionBtn.addEventListener('click', () => {
     addTransactionOverlay.classList.add('active');
@@ -669,6 +748,9 @@ transferTrigger.addEventListener('click', openTransferModal);
 transferBackBtn.addEventListener('click', () => goToTransferStep(transferStep - 1));
 transferNextBtn.addEventListener('click', handleTransferNext);
 closeTransferModalBtn.addEventListener('click', () => transferOverlay.classList.remove('active'));
+
+showMoreBtn.addEventListener('click', openFullHistoryModal);
+document.getElementById('close-history-modal').addEventListener('click', () => historyOverlay.classList.remove('active'));
 
 if(viewAnalyticsBtn) {
     viewAnalyticsBtn.addEventListener('click', () => window.location.href = 'analytics.html');

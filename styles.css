@@ -12,6 +12,18 @@
   --transition: all 0.2s ease;
 }
 
+/* Ghost Mode Styles */
+body.ghost-mode .balance,
+body.ghost-mode .money,
+body.ghost-mode .metric-value,
+body.ghost-mode .transaction-amount,
+body.ghost-mode .space-balance {
+    filter: blur(12px);
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+
 [data-theme="light"] {
   --bg-color: #f1f5f9;
   --card-bg: #ffffff;
@@ -106,6 +118,8 @@ h3 {
   transition: var(--transition);
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .balance.negative {

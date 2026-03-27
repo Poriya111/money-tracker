@@ -18,6 +18,7 @@ function initAnalytics() {
     renderMetrics();
     renderEquityChart();
     renderMonthlyChart();
+    renderDistributionChart();
     renderTopTransactions();
 }
 
@@ -157,6 +158,44 @@ function renderMonthlyChart() {
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#71717a', font: { size: 10 } } },
                 y: { display: false }
+            }
+        }
+    });
+}
+
+function renderDistributionChart() {
+    const ctx = document.getElementById('distributionChart').getContext('2d');
+    const cats = {};
+    
+    // Aggregate expenses by category
+    activeSpaceTransactions.filter(t => t.amount < 0).forEach(t => {
+        const c = t.category || 'General';
+        cats[c] = (cats[c] || 0) + Math.abs(t.amount);
+    });
+
+    const labels = Object.keys(cats);
+    if (labels.length === 0) return;
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: Object.values(cats),
+                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#3f3f46', '#ec4899'],
+                borderWidth: 0,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { color: '#a1a1aa', font: { size: 10 }, usePointStyle: true }
+                }
             }
         }
     });
